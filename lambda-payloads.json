@@ -1,0 +1,42 @@
+{
+    "caliope": {
+        "lambda": {
+            "version": "2.0",
+            "routeKey": "$default",
+            "rawPath": "/",
+            "rawQueryString": "",
+            "headers": {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "accept-encoding": "gzip, deflate, br",
+                "accept-language": "pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3",
+                "content-length": "0",
+                "host": "caliope.mindsforai.com",
+                "upgrade-insecure-requests": "1",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:78.0) Gecko/20100101 Firefox/78.0",
+                "x-amzn-trace-id": "Root=1-5eea024d-e041e477b58481858c2f8ee2",
+                "x-forwarded-for": "189.46.49.86",
+                "x-forwarded-port": "443",
+                "x-forwarded-proto": "https"
+            },
+            "requestContext": {
+                "accountId": "416778555021",
+                "apiId": "uxmknuiryf",
+                "domainName": "caliope.mindsforai.com",
+                "domainPrefix": "caliope",
+                "http": {
+                    "method": "GET",
+                    "path": "/",
+                    "protocol": "HTTP/1.1",
+                    "sourceIp": "189.46.49.86",
+                    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:78.0) Gecko/20100101 Firefox/78.0"
+                },
+                "requestId": "ORVMDipzoAMEPCQ=",
+                "routeKey": "$default",
+                "stage": "$default",
+                "time": "17/Jun/2020:11:45:17 +0000",
+                "timeEpoch": 1592394317091
+            },
+            "isBase64Encoded": false
+        }
+    }
+}
