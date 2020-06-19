@@ -1,0 +1,21 @@
+Utterance;Entity;Body;Start;End;Intent
+What's my grade;;;0;0;EvaluationResult
+What's next activity;;;0;0;UpcomingActivities
+What's my math grade?;Subject;math;10;14;EvaluationResult
+How much did I get from philosophy?;Subject;philosophy;24;34;EvaluationResult
+What's the next activity?;;;;;UpcomingActivities
+What activities for tomorrow;wit$datetime;tomorrow;20;28;UpcomingActivities
+What is the content of the next test?;;;;;NextAssessment
+What is the subject of the next test?;;;;;NextAssessment
+Agenda for tomorrow;wit$datetime;tomorrow;11;19;UpcomingActivities
+Which classes tomorrow?;wit$datetime;tomorrow;14;22;UpcomingActivities
+Activities of the week?;wit$datetime;week;18;22;UpcomingActivities
+Test tomorrow?;wit$datetime;tomorrow;5;13;NextAssessment
+When will the next evaluation of History be?;Subject;History;33;40;NextAssessment
+Qual a próxima prova?;;;;;NextAssessment
+When will the Mathematics assessment be done?;Subject;Mathematics;14;25;NextAssessment
+Do I have homework?;;;;;UpcomingActivities
+How much did I take in English?;Subject;English;23;30;EvaluationResult
+What was my grade in Geography?;Subject;Geography;21;30;EvaluationResult
+When is the next Philosophy exam?;Subject;Philosophy;17;27;NextAssessment
+What were my grades?;;;;;EvaluationResult
