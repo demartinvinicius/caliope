@@ -24,7 +24,8 @@ import base64
 import requests
 import boto3
 import html2text
-import datetime
+from datetime import datetime
+from datetime import timedelta
 
 """ Main entry point - Verifys the method used for calling and invokes the right method to use
 """
@@ -192,12 +193,102 @@ def send_audio_back(msg):
 
     return None
 
+""" Function to retreive the courses stored at moodle
+"""
+def getcourses():
+    #First we gonna take the list of existing courses
+    baseurl = "https://platao.mindsforai.com/webservice/rest/server.php"
+    dados = {
+        "wstoken": MOODLE_TOKEN,
+        "wsfunction": "core_course_get_courses",
+        "moodlewsrestformat":"json"
+    }
+    
+    r = requests.post(baseurl,data = dados)
+    print (r.text)
+    dCourses = json.loads(r.text)
+    return dCourses
+
+
+
+def GetNextAssessments():
+    baseurl = "https://platao.mindsforai.com/webservice/rest/server.php"
+    moodlecourses = [11,10,9,8,7]
+
+    dados = {
+            "wstoken": MOODLE_TOKEN,
+            "wsfunction": "core_calendar_get_action_events_by_courses",
+            "moodlewsrestformat":"json"
+        }
+        
+    i = 0
+    for courseid in moodlecourses:
+        s1 = f"courseids[{i}]"
+        dados[s1]=courseid
+        i += 1
+    
+    startday = int(datetime.timestamp(datetime.now()))
+    dados["timesortfrom"] = startday
+    
+    r = requests.post(baseurl,data = dados)
+
+
+    repply = "\n"
+    dEves = json.loads(r.text)
+    dEves2 = dEves["groupedbycourse"]
+    
+    
+    for i in range(0,len(dEves2)):
+        
+        
+        
+        
+        
+        
+        
+        events = dEves2[i]["events"]
+        currcourse = ""
+        for event in events:
+            
+            if currcourse != event["course"]["fullname"]:
+                repply += "On "+event["course"]["fullname"]+".\n"
+                currcourse = event["course"]["fullname"]
+            
+            repply += html2text.html2text(event["description"]).strip()
+            repply += " on "
+            tStart = datetime.fromtimestamp(event["timestart"])
+            repply += tStart.strftime('%m/%d - at %I:%M%p - %A')
+            repply += ".\n"
+
+
+                    
+        #repply += "On course "+curcourse["displayname"]+" "
+        #repply += f"I've found {iNumcourses} assessments \n"
+    
+        #for event in dEvents["events"]:
+        #repply += html2text.html2text(event["description"]).strip()
+        #repply += ".\n"
+        #tStart = datetime.datetime.fromtimestamp(event["timestart"])
+        #repply += "On "
+        #repply += tStart.strftime('%m/%d - at %I:%M%p - %A')
+        #epply += ".\n"
+
+
+
+    return repply
+
+
 
 """ This function process a text message with the help of Wit.AI
     Receives a string of text
     Returns a text processed
 """
-def handle_text_withai(sTexto):
+def handle_text_withai(dTexto):
+    
+    
+    
+    sTexto = dTexto["text"]
+    
     params = {
         "v": "20200513",
         "q": sTexto
@@ -218,7 +309,15 @@ def handle_text_withai(sTexto):
         return "I'm sorry I can't understand what do you intent...\nMay you reformultate your question?"
     else:
         print(r.text)
-        repply =  "Ok! I understood that your intent is "+dIntents[0]["name"]
+        #Now we gonna take a list of courses on moodle
+        #May we gonna need to filter the information by course
+        #moodlelist = getcourses()
+        
+        
+        repply =  "Ok! I understood that your intent is "
+        if dIntents[0]["name"] == "NextAssessment":
+            repply += "to get the next assessments.\n"
+        
         #repply += " with a confidence of "+str(dIntents[0]["confidence"])
         dEntities = resp["entities"]
         if len(dEntities) > 0:
@@ -231,38 +330,24 @@ def handle_text_withai(sTexto):
                 entiti = dEntities[kejk][0]
                 print(type(entiti))
                 print(entiti)
-                repply += "\n"+entiti["name"]+" "+entiti["body"]+" "+entiti["value"]
+                #repply += "\n"+entiti["name"]+" "+entiti["body"]+" "+entiti["value"]
+        
+            
                     
         
         if dIntents[0]["name"] == "NextAssessment":
-            baseurl = "https://platao.mindsforai.com/webservice/rest/server.php"
-            dados = {
-                "wstoken": MOODLE_TOKEN,
-                "wsfunction": "core_calendar_get_action_events_by_course",
-                "moodlewsrestformat":"json",
-                "courseid": 11
+            
+            fastmsg = {
+                "text": "Just a momment. I'm looking for information.",
+                "messageto": dTexto["messageto"]
             }
-        
-            r = requests.post(baseurl,data = dados)
-            #print (r.text)
+            
+            sendtextback(fastmsg)
+            send_audio_back(fastmsg)
+            
+            
+            repply += GetNextAssessments()
 
-
-            #parsing events list
-            dEvents = json.loads(r.text)
-            iNumcourses = len(dEvents["events"])
-    
-            repply += f"I've found {iNumcourses} assessments.\n"
-    
-            for event in dEvents["events"]:
-                repply += html2text.html2text(event["description"]).strip()
-                repply += ".\n"
-                tStart = datetime.datetime.fromtimestamp(event["timestart"])
-                repply += "On "
-                repply += tStart.strftime('%m/%d/%Y')
-                repply += ".\n"
-        
-        
-        
         return repply
     
 
@@ -289,9 +374,15 @@ def handle_facebook_message(msg):
         #}
         
         #Let's process the text message....
+        dDataToHandle = {
+            "messageto": sSenderId,
+            "text": dTheMsg["text"]
+        }
+        
+        
         reply = {
             "messageto": sSenderId,
-            "text": handle_text_withai(dTheMsg["text"])
+            "text": handle_text_withai(dDataToHandle)
         }
         sendtextback(reply)
         send_audio_back(reply)
@@ -319,6 +410,14 @@ def handle_facebook_message(msg):
     return None
 
 
+
+
+
+
+
+
+
+
 """ This function gets a course list from Moodle"""
 def get_moodle_course_list():
     baseurl = "https://platao.mindsforai.com/webservice/rest/server.php"
@@ -344,6 +443,8 @@ def get_moodle_course_list():
     
     
     return strReply
+
+
 
 def handle_post(event):
     try:

@@ -83,11 +83,18 @@ def deletecourses():
 
 def listevents():
     baseurl = "https://platao.mindsforai.com/webservice/rest/server.php"
+    
+    startday = int(datetime.timestamp(datetime.now()))
+    endday = int(datetime.timestamp(datetime.now()+timedelta(days = 7)))
     dados = {
             "wstoken": MOODLE_TOKEN,
-            "wsfunction": "core_calendar_get_action_events_by_course",
+            "wsfunction": "core_calendar_get_action_events_by_courses",
             "moodlewsrestformat":"json",
-            "courseid": 11
+            "courseids[0]": 7,
+            "courseids[1]": 8,
+            "courseids[2]": 9,
+            "courseids[3]": 10,
+            "courseids[4]": 11
         }
         
     r = requests.post(baseurl,data = dados)
@@ -95,16 +102,28 @@ def listevents():
 
 
     #parsing events list
-    dEvents = json.loads(r.text)
-    iNumcourses = len(dEvents["events"])
+    dEves = json.loads(r.text)
+    dEves2 = dEves["groupedbycourse"]
     
-    print (f"I've found {iNumcourses} events:")
     
-    for event in dEvents["events"]:
-        print(event["name"])
-        print(html2text.html2text(event["description"]).strip())
-        tStart = datetime.fromtimestamp(event["timestart"])
-        print(tStart.strftime('%m/%d/%Y'))
+    #print(type(dEves2[0]))
+    
+    
+    for i in range(0,len(dEves2)):
+        
+        
+        
+        #print (dEves2[i]["course"])
+        events = dEves2[i]["events"]
+        
+        
+        for event in events:
+            print(event["course"]["fullname"])
+            print(event["name"])
+            print(html2text.html2text(event["description"]).strip())
+            tStart = datetime.fromtimestamp(event["timestart"])
+            print(tStart.strftime('%m/%d/%Y'))
+        
         
 def createevents():
     
