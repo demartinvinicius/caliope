@@ -15,6 +15,7 @@ VERIFY_TOKEN = "b13005af8a09c91a9c0406c870caceba57feb90947e2f6e4d84076345cc31c96
 FB_PAGE_TOKEN = "EAAG0YYVksEIBAMXcIZC3rpD5T2T4vgOVHQIe7u4ziwZBvPaoelHezJEDRuc99nFwSXshbhJ7ZBf8TjCRwXsbFxa3ZBHi3RLjgQZBiJBQ185fiOHigTOrIs6djgKHLAHAUcqw8ZB3KRdoK9UZCij5hofi26SR2W1XJMZCG8rmmfTcjgZDZD"
 GOOGLE_KEY = "AIzaSyDjfBNT79HnO9fyTPXUbeRy6TPms7zvBcg"
 WIT_SERVER_TOKEN = "JUEFOUOWZIKGTKBZQEQU4H3QHGOWFL5D"
+MOODLE_TOKEN = "0402eb30801b04b2f47e9b65ae0efcdd"
 
 
 import sys
@@ -22,7 +23,8 @@ import json
 import base64
 import requests
 import boto3
-
+import html2text
+import datetime
 
 """ Main entry point - Verifys the method used for calling and invokes the right method to use
 """
@@ -190,6 +192,80 @@ def send_audio_back(msg):
 
     return None
 
+
+""" This function process a text message with the help of Wit.AI
+    Receives a string of text
+    Returns a text processed
+"""
+def handle_text_withai(sTexto):
+    params = {
+        "v": "20200513",
+        "q": sTexto
+    }
+
+    headers = {
+        "Authorization": "Bearer "+WIT_SERVER_TOKEN
+    }
+    sUrl = "https://api.wit.ai/message"
+    
+    r = requests.get(sUrl,headers = headers,params=params)
+    
+    # Let's see if was identified at least an intend...
+    resp = json.loads(r.text)
+    dIntents = resp["intents"]
+    
+    if len(dIntents) == 0:
+        return "I'm sorry I can't understand what do you intent...\nMay you reformultate your question?"
+    else:
+        print(r.text)
+        repply =  "Ok! I understood that your intent is "+dIntents[0]["name"]
+        #repply += " with a confidence of "+str(dIntents[0]["confidence"])
+        dEntities = resp["entities"]
+        if len(dEntities) > 0:
+            print(r.text)
+            repply += "\nIn your message I've found "+str(len(dEntities))+" entity(ies):"
+            print(repply)
+            
+            kej = dict.keys(dEntities)
+            for kejk in kej:
+                entiti = dEntities[kejk][0]
+                print(type(entiti))
+                print(entiti)
+                repply += "\n"+entiti["name"]+" "+entiti["body"]+" "+entiti["value"]
+                    
+        
+        if dIntents[0]["name"] == "NextAssessment":
+            baseurl = "https://platao.mindsforai.com/webservice/rest/server.php"
+            dados = {
+                "wstoken": MOODLE_TOKEN,
+                "wsfunction": "core_calendar_get_action_events_by_course",
+                "moodlewsrestformat":"json",
+                "courseid": 11
+            }
+        
+            r = requests.post(baseurl,data = dados)
+            #print (r.text)
+
+
+            #parsing events list
+            dEvents = json.loads(r.text)
+            iNumcourses = len(dEvents["events"])
+    
+            repply += f"I've found {iNumcourses} assessments.\n"
+    
+            for event in dEvents["events"]:
+                repply += html2text.html2text(event["description"]).strip()
+                repply += ".\n"
+                tStart = datetime.datetime.fromtimestamp(event["timestart"])
+                repply += "On "
+                repply += tStart.strftime('%m/%d/%Y')
+                repply += ".\n"
+        
+        
+        
+        return repply
+    
+
 """ This function handles the call when there is a new MESSAGE to process
 """
 def handle_facebook_message(msg):
@@ -207,11 +283,18 @@ def handle_facebook_message(msg):
                 
     #Does we have a text message
     if "text" in dTheMsg:
+        #reply = {
+        #    "messageto": sSenderId,
+        #    "text": "Thanks you've send " + dTheMsg["text"]
+        #}
+        
+        #Let's process the text message....
         reply = {
             "messageto": sSenderId,
-            "text": "Thanks you've send " + dTheMsg["text"]
+            "text": handle_text_withai(dTheMsg["text"])
         }
         sendtextback(reply)
+        send_audio_back(reply)
         
     if "attachments" in dTheMsg:
         #We have a attachment!
@@ -234,6 +317,33 @@ def handle_facebook_message(msg):
                     
                 send_audio_back(reply)    
     return None
+
+
+""" This function gets a course list from Moodle"""
+def get_moodle_course_list():
+    baseurl = "https://platao.mindsforai.com/webservice/rest/server.php"
+    
+    dados = {
+        "wstoken": MOODLE_TOKEN,
+        "wsfunction": "core_course_get_courses",
+        "moodlewsrestformat":"json"
+    }
+    
+    r = requests.post(baseurl,data = dados)
+    dCourses = json.loads(r.text)
+    
+    strReply = "Let's see what I have here:\nI have found the following courses in my memory."
+    for course in dCourses:
+        if course["id"] != 1:
+            strReply += "\n" + course["displayname"]+"."
+    
+    strReply += "\nWith me you can get information about: next assessments, next activities and grades!"
+    strReply += "\nI hope that you enjoy talking to me!"
+    strReply += "\nThank you for your attention"+"."
+        
+    
+    
+    return strReply
 
 def handle_post(event):
     try:
@@ -262,7 +372,22 @@ def handle_post(event):
             # Is it really a message that we received?
             if "messaging" in entry:
                 for msg in entry["messaging"]:
-                    handle_facebook_message(msg)
+                    if "message" in msg:
+                        # We received a facebook message
+                        handle_facebook_message(msg)
+                    
+                    if "postback" in msg:
+                        dctSender = msg["sender"]
+                        if msg["postback"]["payload"] == "student":
+                            sCoursesList = get_moodle_course_list()
+                            textmessage = {
+                    
+                                "messageto": dctSender["id"],
+                                "text": sCoursesList
+                            }
+
+                            sendtextback(textmessage)
+                            send_audio_back(textmessage)
 
         return {
             'statusCode': 200,
